@@ -1,0 +1,13 @@
+{
+  "name": "@foundry/design-tokens",
+  "version": "0.0.1",
+  "private": true,
+  "exports": {
+    "./tokens.css": "./src/tokens.css"
+  },
+  "scripts": {
+    "build": "node -e \"console.log('tokens ready')\"",
+    "typecheck": "node -e \"console.log('tokens ready')\"",
+    "test": "node -e \"console.log('tokens ready')\""
+  }
+}

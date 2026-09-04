@@ -1,0 +1,24 @@
+{
+  "name": "@foundry/admin",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 5174",
+    "build": "vite build",
+    "typecheck": "tsc --noEmit",
+    "test": "node -e \"console.log('admin: smoke via build')\""
+  },
+  "dependencies": {
+    "@foundry/design-tokens": "workspace:*",
+    "@vitejs/plugin-react": "^5.0.2",
+    "vite": "^7.1.4",
+    "typescript": "^5.9.2",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.12",
+    "@types/react-dom": "^19.1.9"
+  }
+}

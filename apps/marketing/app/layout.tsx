@@ -1,0 +1,1 @@
+import type {Metadata} from "next";import "@foundry/design-tokens/tokens.css";import"./site.css";export const metadata:Metadata={title:"Vibe SaaS Foundry",description:"A production reference SaaS built to be transformed by coding agents."};export default function Layout({children}:{children:React.ReactNode}){return <html lang="en"><body>{children}</body></html>}

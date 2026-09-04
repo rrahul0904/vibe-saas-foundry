@@ -1,0 +1,62 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-foundry}
+      POSTGRES_USER: ${POSTGRES_USER:-foundry}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-foundry}
+    ports: ["5432:5432"]
+    volumes: ["postgres_data:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-foundry} -d ${POSTGRES_DB:-foundry}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://${POSTGRES_USER:-foundry}:${POSTGRES_PASSWORD:-foundry}@postgres:5432/${POSTGRES_DB:-foundry}
+      API_PORT: 4000
+      WEB_ORIGIN: http://localhost:5173
+      ADMIN_ORIGIN: http://localhost:5174
+      SESSION_TTL_HOURS: 168
+      ADMIN_API_KEY: ${ADMIN_API_KEY:-change-me}
+      DB_SYNCHRONIZE: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports: ["4000:4000"]
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        VITE_API_URL: http://localhost:4000
+    depends_on: [api]
+    ports: ["5173:80"]
+
+  admin:
+    build:
+      context: .
+      dockerfile: apps/admin/Dockerfile
+      args:
+        VITE_API_URL: http://localhost:4000
+    depends_on: [api]
+    ports: ["5174:80"]
+
+  marketing:
+    build:
+      context: .
+      dockerfile: apps/marketing/Dockerfile
+      args:
+        NEXT_PUBLIC_WEB_URL: http://localhost:5173
+    depends_on: [web]
+    ports: ["3000:80"]
+
+volumes:
+  postgres_data:
