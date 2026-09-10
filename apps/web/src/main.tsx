@@ -1,145 +1,27 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { createRoot } from "react-dom/client";
-import type { TaskDto, TaskPriority, TaskStatus } from "@foundry/contracts";
-import "@foundry/design-tokens/tokens.css";
-import "./styles.css";
-import { api, token } from "./api";
+import React,{useEffect,useMemo,useRef,useState}from"react";
+import{createRoot}from"react-dom/client";
+import type{OrganizationSummary,TaskDto,TaskPriority,TaskStatus}from"@foundry/contracts";
+import"@foundry/design-tokens/tokens.css";import"./styles.css";
+import{ACTIVE_ORG_KEY,api,SESSION_KEY,activeOrganization,token}from"./api";
+import{TeamPanel}from"./TeamPanel";
 
-type Mode = "login" | "register" | "forgot" | "reset";
-const nextStatus: Record<TaskStatus, TaskStatus> = { pending: "in_progress", in_progress: "done", done: "pending" };
+type Mode="login"|"register"|"forgot"|"reset";type View="tasks"|"team";
+const nextStatus:Record<TaskStatus,TaskStatus>={pending:"in_progress",in_progress:"done",done:"pending"};
 
-function Auth({ onLogin }: { onLogin: () => void }) {
-  const url = new URL(window.location.href);
-  const initialReset = url.searchParams.get("reset") || "";
-  const initialVerify = url.searchParams.get("verify") || "";
-  const [mode, setMode] = useState<Mode>(initialReset ? "reset" : "login");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [message, setMessage] = useState("");
-  const [verify, setVerify] = useState(initialVerify);
-  const [resetToken, setResetToken] = useState(initialReset);
+function Auth({onLogin}:{onLogin:()=>void}){const url=new URL(window.location.href),initialReset=url.searchParams.get("reset")||"",initialVerify=url.searchParams.get("verify")||"";const[mode,setMode]=useState<Mode>(initialReset?"reset":"login"),[email,setEmail]=useState(""),[password,setPassword]=useState(""),[message,setMessage]=useState(""),[verify,setVerify]=useState(initialVerify),[resetToken,setResetToken]=useState(initialReset);useEffect(()=>{if(initialVerify)verifyNow(initialVerify)},[]);async function submit(e:React.FormEvent){e.preventDefault();setMessage("");try{if(mode==="register"){const r=await api.register(email,password);setVerify(r.verificationToken||"");setMessage("Account created. Check your email for the verification link.")}else if(mode==="forgot"){const r=await api.requestPasswordReset(email);if(r.resetToken){setResetToken(r.resetToken);setMode("reset")}setMessage(r.message)}else if(mode==="reset"){await api.resetPassword(resetToken,password);setMode("login");setMessage("Password reset. Previous sessions were revoked.")}else{const r=await api.login(email,password);localStorage.setItem(SESSION_KEY,r.sessionToken);onLogin()}}catch(err:any){setMessage(err.message)}}async function verifyNow(value=verify){if(!value)return;try{await api.verify(value);url.searchParams.delete("verify");history.replaceState(null,"",`${url.pathname}${url.search}`);setMode("login");setMessage("Email verified. You can sign in.")}catch(err:any){setMessage(err.message)}}async function resend(){try{const r=await api.resendVerification(email);if(r.verificationToken)setVerify(r.verificationToken);setMessage(r.message)}catch(err:any){setMessage(err.message)}}const buttonText=mode==="login"?"Enter workspace":mode==="register"?"Create account":mode==="forgot"?"Send reset link":"Set new password";return <div className="authShell"><section className="authCard"><span className="eyebrow">VIBE SAAS FOUNDRY</span><h1>Ship from a working system.</h1><p className="muted">Production identity, multi-tenant workspaces, invitations and role-aware collaboration.</p><div className="tabs"><button className={mode==="login"?"active":""}onClick={()=>setMode("login")}>Sign in</button><button className={mode==="register"?"active":""}onClick={()=>setMode("register")}>Create account</button></div><form onSubmit={submit}>{mode!=="reset"&&<label>Email<input value={email}onChange={e=>setEmail(e.target.value)}type="email"required/></label>}{mode!=="forgot"&&<label>{mode==="reset"?"New password":"Password"}<input value={password}onChange={e=>setPassword(e.target.value)}type="password"minLength={8}required/></label>}{mode==="reset"&&<label>Reset token<input value={resetToken}onChange={e=>setResetToken(e.target.value)}required/></label>}<button className="primary"type="submit">{buttonText}</button></form>{mode==="login"&&<div className="authLinks"><button onClick={()=>setMode("forgot")}>Forgot password?</button><button onClick={resend}disabled={!email}>Resend verification</button></div>}{verify&&<div className="verify"><input value={verify}onChange={e=>setVerify(e.target.value)}/><button onClick={()=>verifyNow()}>Verify development token</button></div>}{message&&<p className="notice">{message}</p>}</section></div>}
 
-  useEffect(() => {
-    if (initialVerify) verifyNow(initialVerify);
-  }, []);
-
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    setMessage("");
-    try {
-      if (mode === "register") {
-        const r = await api.register(email, password);
-        setVerify(r.verificationToken || "");
-        setMessage("Account created. Check your email for the verification link.");
-      } else if (mode === "forgot") {
-        const r = await api.requestPasswordReset(email);
-        if (r.resetToken) { setResetToken(r.resetToken); setMode("reset"); }
-        setMessage(r.message);
-      } else if (mode === "reset") {
-        await api.resetPassword(resetToken, password);
-        setMode("login");
-        setMessage("Password reset. All previous sessions were revoked; sign in again.");
-      } else {
-        const r = await api.login(email, password);
-        localStorage.setItem("foundry_session", r.sessionToken);
-        onLogin();
-      }
-    } catch (err: any) { setMessage(err.message); }
-  }
-
-  async function verifyNow(value = verify) {
-    if (!value) return;
-    try {
-      await api.verify(value);
-      url.searchParams.delete("verify");
-      history.replaceState(null, "", `${url.pathname}${url.search}`);
-      setMode("login");
-      setMessage("Email verified. You can sign in.");
-    } catch (err: any) { setMessage(err.message); }
-  }
-
-  async function resend() {
-    try {
-      const r = await api.resendVerification(email);
-      if (r.verificationToken) setVerify(r.verificationToken);
-      setMessage(r.message);
-    } catch (err: any) { setMessage(err.message); }
-  }
-
-  const buttonText = mode === "login" ? "Enter workspace" : mode === "register" ? "Create account" : mode === "forgot" ? "Send reset link" : "Set new password";
-
-  return <div className="authShell"><section className="authCard">
-    <span className="eyebrow">VIBE SAAS FOUNDRY</span><h1>Ship from a working system.</h1>
-    <p className="muted">Production identity now includes verification, password recovery, revocable sessions and abuse throttling.</p>
-    <div className="tabs"><button className={mode === "login" ? "active" : ""} onClick={() => setMode("login")}>Sign in</button><button className={mode === "register" ? "active" : ""} onClick={() => setMode("register")}>Create account</button></div>
-    <form onSubmit={submit}>
-      {mode !== "reset" && <label>Email<input value={email} onChange={e => setEmail(e.target.value)} type="email" required /></label>}
-      {mode !== "forgot" && <label>{mode === "reset" ? "New password" : "Password"}<input value={password} onChange={e => setPassword(e.target.value)} type="password" minLength={8} required /></label>}
-      {mode === "reset" && <label>Reset token<input value={resetToken} onChange={e => setResetToken(e.target.value)} required /></label>}
-      <button className="primary" type="submit">{buttonText}</button>
-    </form>
-    {mode === "login" && <div className="authLinks"><button onClick={() => setMode("forgot")}>Forgot password?</button><button onClick={resend} disabled={!email}>Resend verification</button></div>}
-    {verify && <div className="verify"><input value={verify} onChange={e => setVerify(e.target.value)} /><button onClick={() => verifyNow()}>Verify development token</button></div>}
-    {message && <p className="notice">{message}</p>}
-  </section></div>;
-}
-
-function App() {
-  const [logged, setLogged] = useState(Boolean(token()));
-  const [tasks, setTasks] = useState<TaskDto[]>([]);
-  const [error, setError] = useState("");
-  const [title, setTitle] = useState("");
-  const [priority, setPriority] = useState<TaskPriority>("medium");
-  const initial = useMemo(() => new URLSearchParams(location.search), []);
-  const [search, setSearch] = useState(initial.get("search") || "");
-  const [status, setStatus] = useState(initial.get("status") || "");
-  const [sort, setSort] = useState(initial.get("sort") || "created");
-
-  const buildQuery = () => {
-    const p = new URLSearchParams(); if (search) p.set("search", search); if (status) p.set("status", status); if (sort) p.set("sort", sort);
-    return p.toString() ? `?${p}` : "";
-  };
-
-  async function load() {
-    if (!logged) return;
-    try { setError(""); setTasks(await api.tasks(buildQuery())); }
-    catch (e: any) { setError(e.message); if (/session|token|unauthorized/i.test(e.message)) { localStorage.removeItem("foundry_session"); setLogged(false); } }
-  }
-
-  useEffect(() => {
-    if (logged) {
-      const p = new URLSearchParams(); if (search) p.set("search", search); if (status) p.set("status", status); if (sort) p.set("sort", sort);
-      history.replaceState(null, "", `${location.pathname}${p.toString() ? `?${p}` : ""}`);
-    }
-    const t = setTimeout(load, 180); return () => clearTimeout(t);
-  }, [search, status, sort, logged]);
-
-  if (!logged) return <Auth onLogin={() => setLogged(true)} />;
-
-  async function add(e: React.FormEvent) {
-    e.preventDefault(); if (!title.trim()) return;
-    const optimistic: TaskDto = { id: `temp-${Date.now()}`, title, description: null, status: "pending", priority, dueDate: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
-    setTasks(v => [optimistic, ...v]); setTitle("");
-    try { const real = await api.createTask({ title: optimistic.title, priority }); setTasks(v => v.map(x => x.id === optimistic.id ? real : x)); }
-    catch (e: any) { setTasks(v => v.filter(x => x.id !== optimistic.id)); setError(e.message); }
-  }
-
-  async function cycle(task: TaskDto) {
-    const before = task; const changed = { ...task, status: nextStatus[task.status] };
-    setTasks(v => v.map(x => x.id === task.id ? changed : x));
-    try { const real = await api.updateTask(task.id, { status: changed.status }); setTasks(v => v.map(x => x.id === task.id ? real : x)); }
-    catch (e: any) { setTasks(v => v.map(x => x.id === task.id ? before : x)); setError(e.message); }
-  }
-
-  async function remove(task: TaskDto) { const snapshot = tasks; setTasks(v => v.filter(x => x.id !== task.id)); try { await api.deleteTask(task.id); } catch (e: any) { setTasks(snapshot); setError(e.message); } }
-  async function signOut(all = false) { try { all ? await api.logoutAll() : await api.logout(); } finally { localStorage.removeItem("foundry_session"); setLogged(false); } }
-
-  return <div className="appShell"><aside><div><span className="eyebrow">FOUNDRY</span><h2>Reference OS</h2></div><nav><button className="navActive">Tasks</button><button onClick={() => signOut(true)}>Log out everywhere</button><button onClick={() => signOut()}>Sign out</button></nav></aside><main>
-    <header><div><span className="eyebrow">WORKSPACE</span><h1>Tasks</h1><p className="muted">Filters persist in the URL. Status changes are optimistic and roll back on failure.</p></div><div className="stat"><b>{tasks.length}</b><span>visible tasks</span></div></header>
-    <section className="filters"><input placeholder="Search tasks" value={search} onChange={e => setSearch(e.target.value)} /><select value={status} onChange={e => setStatus(e.target.value)}><option value="">All statuses</option><option value="pending">Pending</option><option value="in_progress">In progress</option><option value="done">Done</option></select><select value={sort} onChange={e => setSort(e.target.value)}><option value="created">Newest</option><option value="due">Due date</option><option value="priority">Priority</option><option value="title">Title</option></select></section>
-    <form className="composer" onSubmit={add}><input placeholder="Add a task…" value={title} onChange={e => setTitle(e.target.value)} /><select value={priority} onChange={e => setPriority(e.target.value as TaskPriority)}><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select><button className="primary">Add task</button></form>
-    {error && <div className="error">{error}</div>}<section className="taskList">{tasks.map(task => <article className="task" key={task.id}><button className={`status ${task.status}`} onClick={() => cycle(task)}>{task.status.replace("_", " ")}</button><div className="taskText"><h3>{task.title}</h3><p>{task.dueDate ? `Due ${new Date(task.dueDate).toLocaleDateString()}` : "No due date"}</p></div><span className={`priority ${task.priority}`}>{task.priority}</span><button className="ghost" onClick={() => remove(task)}>Delete</button></article>)}{!tasks.length && <div className="empty">No tasks match this view.</div>}</section>
-  </main></div>;
-}
-
-createRoot(document.getElementById("root")!).render(<React.StrictMode><App /></React.StrictMode>);
+function App(){const[logged,setLogged]=useState(Boolean(token())),[organizations,setOrganizations]=useState<OrganizationSummary[]>([]),[activeOrgId,setActiveOrgId]=useState(activeOrganization()||""),[view,setView]=useState<View>("tasks"),[tasks,setTasks]=useState<TaskDto[]>([]),[error,setError]=useState(""),[title,setTitle]=useState(""),[priority,setPriority]=useState<TaskPriority>("medium");const initial=useMemo(()=>new URLSearchParams(location.search),[]),invitationToken=useMemo(()=>initial.get("invite")||"",[]),inviteHandled=useRef(false);const[search,setSearch]=useState(initial.get("search")||""),[status,setStatus]=useState(initial.get("status")||""),[sort,setSort]=useState(initial.get("sort")||"created");const activeOrg=organizations.find(o=>o.id===activeOrgId)||null;
+  async function loadOrganizations(){if(!logged)return;try{const list=await api.organizations();setOrganizations(list);let selected=activeOrganization();if(!selected||!list.some(o=>o.id===selected))selected=list[0]?.id||"";if(selected){localStorage.setItem(ACTIVE_ORG_KEY,selected);setActiveOrgId(selected)}}catch(e:any){setError(e.message)}}
+  useEffect(()=>{loadOrganizations()},[logged]);
+  useEffect(()=>{if(!logged||!invitationToken||inviteHandled.current)return;inviteHandled.current=true;(async()=>{try{await api.acceptInvitation(invitationToken);const u=new URL(location.href);u.searchParams.delete("invite");history.replaceState(null,"",`${u.pathname}${u.search}`);await loadOrganizations()}catch(e:any){setError(e.message)}})()},[logged]);
+  const buildQuery=()=>{const p=new URLSearchParams();if(search)p.set("search",search);if(status)p.set("status",status);if(sort)p.set("sort",sort);return p.toString()?`?${p}`:""};
+  async function loadTasks(){if(!logged||!activeOrgId)return;try{setError("");setTasks(await api.tasks(buildQuery()))}catch(e:any){setError(e.message);if(/session|token|unauthorized/i.test(e.message)){localStorage.removeItem(SESSION_KEY);setLogged(false)}}}
+  useEffect(()=>{if(logged){const p=new URLSearchParams();if(search)p.set("search",search);if(status)p.set("status",status);if(sort)p.set("sort",sort);history.replaceState(null,"",`${location.pathname}${p.toString()?`?${p}`:""}`)}const t=setTimeout(loadTasks,150);return()=>clearTimeout(t)},[search,status,sort,logged,activeOrgId]);
+  if(!logged)return <Auth onLogin={()=>setLogged(true)}/>;
+  function switchOrg(id:string){localStorage.setItem(ACTIVE_ORG_KEY,id);setActiveOrgId(id);setTasks([])}
+  async function createWorkspace(){const name=prompt("Workspace name");if(!name?.trim())return;try{const org=await api.createOrganization(name);await loadOrganizations();switchOrg(org.id);setView("team")}catch(e:any){setError(e.message)}}
+  async function add(e:React.FormEvent){e.preventDefault();if(!title.trim()||!activeOrgId)return;const optimistic:TaskDto={id:`temp-${Date.now()}`,title,description:null,status:"pending",priority,dueDate:null,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};setTasks(v=>[optimistic,...v]);setTitle("");try{const real=await api.createTask({title:optimistic.title,priority});setTasks(v=>v.map(x=>x.id===optimistic.id?real:x))}catch(e:any){setTasks(v=>v.filter(x=>x.id!==optimistic.id));setError(e.message)}}
+  async function cycle(task:TaskDto){const before=task,changed={...task,status:nextStatus[task.status]};setTasks(v=>v.map(x=>x.id===task.id?changed:x));try{const real=await api.updateTask(task.id,{status:changed.status});setTasks(v=>v.map(x=>x.id===task.id?real:x))}catch(e:any){setTasks(v=>v.map(x=>x.id===task.id?before:x));setError(e.message)}}
+  async function remove(task:TaskDto){const snapshot=tasks;setTasks(v=>v.filter(x=>x.id!==task.id));try{await api.deleteTask(task.id)}catch(e:any){setTasks(snapshot);setError(e.message)}}async function signOut(all=false){try{all?await api.logoutAll():await api.logout()}finally{localStorage.removeItem(SESSION_KEY);setLogged(false)}}
+  return <div className="appShell"><aside><div><span className="eyebrow">FOUNDRY</span><h2>Reference OS</h2><div className="workspacePicker"><select value={activeOrgId}onChange={e=>switchOrg(e.target.value)}>{organizations.map(org=><option key={org.id}value={org.id}>{org.name}</option>)}</select><button onClick={createWorkspace}>+ Workspace</button></div></div><nav><button className={view==="tasks"?"navActive":""}onClick={()=>setView("tasks")}>Tasks</button><button className={view==="team"?"navActive":""}onClick={()=>setView("team")}>Team & plan</button><button onClick={()=>signOut(true)}>Log out everywhere</button><button onClick={()=>signOut()}>Sign out</button></nav></aside><main>{error&&<div className="error topError">{error}</div>}{view==="team"&&activeOrg?<TeamPanel organization={activeOrg}onOrganizationsChanged={loadOrganizations}/>:<><header><div><span className="eyebrow">{activeOrg?.name||"WORKSPACE"}</span><h1>Tasks</h1><p className="muted">Tenant-isolated tasks with URL filters and optimistic updates.</p></div><div className="stat"><b>{tasks.length}</b><span>visible tasks</span></div></header><section className="filters"><input placeholder="Search tasks"value={search}onChange={e=>setSearch(e.target.value)}/><select value={status}onChange={e=>setStatus(e.target.value)}><option value="">All statuses</option><option value="pending">Pending</option><option value="in_progress">In progress</option><option value="done">Done</option></select><select value={sort}onChange={e=>setSort(e.target.value)}><option value="created">Newest</option><option value="due">Due date</option><option value="priority">Priority</option><option value="title">Title</option></select></section><form className="composer"onSubmit={add}><input placeholder="Add a task…"value={title}onChange={e=>setTitle(e.target.value)}/><select value={priority}onChange={e=>setPriority(e.target.value as TaskPriority)}><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select><button className="primary">Add task</button></form><section className="taskList">{tasks.map(task=><article className="task"key={task.id}><button className={`status ${task.status}`}onClick={()=>cycle(task)}>{task.status.replace("_"," ")}</button><div className="taskText"><h3>{task.title}</h3><p>{task.dueDate?`Due ${new Date(task.dueDate).toLocaleDateString()}`:"No due date"}</p></div><span className={`priority ${task.priority}`}>{task.priority}</span><button className="ghost"onClick={()=>remove(task)}>Delete</button></article>)}{!tasks.length&&<div className="empty">No tasks match this workspace view.</div>}</section></>}</main></div>}
+createRoot(document.getElementById("root")!).render(<React.StrictMode><App/></React.StrictMode>);

@@ -1,37 +1,31 @@
 # Vibe SaaS Foundry
 
-A clean-room, production-oriented reference SaaS for AI-assisted software development. It applies the strongest idea behind full-stack vibe-coding toolkits: give coding agents a **working product to transform**, not an empty boilerplate to invent from scratch.
+A clean-room, production-oriented reference SaaS for AI-assisted software development. Give coding agents a **working product to transform**, not an empty boilerplate to invent from scratch.
 
 ## Applications
 
 | App | Stack | Purpose |
 |---|---|---|
-| `apps/api` | NestJS + TypeORM + PostgreSQL | Identity, sessions, tasks, audit and operator APIs |
-| `apps/web` | React + Vite | Customer SaaS with optimistic task UX |
+| `apps/api` | NestJS + TypeORM + PostgreSQL | Identity, tenants, RBAC, entitlements, tasks, audit and operator APIs |
+| `apps/web` | React + Vite | Multi-tenant customer SaaS with optimistic task UX |
 | `apps/admin` | React + Vite | Authenticated operator console |
 | `apps/marketing` | Next.js App Router | Static marketing surface |
-| `apps/mobile` | Flutter | Mobile reference client |
+| `apps/mobile` | Flutter | Multi-tenant mobile reference client |
 
-Shared contracts and design tokens live under `packages/`.
-
-## Implemented foundation
-- registration and transactional email verification
-- resend verification
-- password login with bcrypt hashing
-- password reset with one-time expiring tokens
-- revocable opaque sessions and logout everywhere
-- password reset revokes all previous sessions
-- member/operator persisted roles
-- operator bootstrap allowlist via `OPERATOR_EMAILS`
-- operator-only admin metrics, users and security audit history
-- global and auth-specific request throttling
-- Helmet security headers and strict DTO allowlisting
-- task create/read/update/delete with ownership enforcement
-- URL-persisted customer list state
-- optimistic task updates with rollback
-- Docker Compose + migration-first production startup
-- CI typecheck/build/test pipeline
-- agent-readable architecture and transformation recipes
+## Implemented
+- email/password identity with verification, reset and revocable sessions
+- transactional email adapter, request throttling, Helmet and security audit events
+- customer/operator persisted roles and authenticated operator console
+- organizations/workspaces with owner/admin/member RBAC
+- invitation creation, email delivery, acceptance and revocation
+- membership role changes/removal with owner safeguards
+- entitlement records with plan code, member limits and feature flags
+- personal-workspace creation plus migration/backfill for existing users
+- tenant-isolated task CRUD via `x-organization-id`
+- workspace switcher and Team & Plan customer UI
+- mobile workspace selection
+- URL-persisted filters and optimistic task updates with rollback
+- migration-first Docker startup, CI build/typecheck/test and CodeQL
 
 ## Local start
 
@@ -44,13 +38,9 @@ pnpm db:migrate
 pnpm dev
 ```
 
-Default development URLs:
-- API: http://localhost:4000
-- Web: http://localhost:5173
-- Admin: http://localhost:5174
-- Marketing: http://localhost:3000
+Default URLs: API `:4000`, Web `:5173`, Admin `:5174`, Marketing `:3000`.
 
-Set your email in `OPERATOR_EMAILS`, register and verify that account, then sign into the admin application with the same email/password. During non-production auth flows, verification/reset tokens are also returned in responses for local testing. Production never returns those secrets and expects `RESEND_API_KEY` to be configured.
+Set your email in `OPERATOR_EMAILS` before registering to bootstrap an operator. Development responses expose verification/reset/invitation tokens for local testing; production does not and requires transactional email configuration.
 
 ## Docker
 
@@ -58,9 +48,9 @@ Set your email in `OPERATOR_EMAILS`, register and verify that account, then sign
 docker compose up --build
 ```
 
-Docker production mode runs TypeORM migrations before the API starts; schema synchronization is disabled.
+Production Docker runs migrations before API startup and disables schema synchronization.
 
 ## Clean-room scope
-This repository is an original implementation derived from publicly observable product concepts and standard SaaS patterns. It does not contain or claim access to the commercial toolkit's private source code.
+Original implementation based on public product concepts and standard SaaS patterns; no commercial private source is included or claimed.
 
-See `docs/PROJECT_PLAN.md`, `docs/IMPLEMENTATION_PLAN.md`, `docs/ARCHITECTURE.md`, `docs/SECURITY.md`, and `docs/ROADMAP.md`.
+Start with `docs/PROJECT_PLAN.md`, `docs/IMPLEMENTATION_PLAN.md`, `docs/ARCHITECTURE.md`, `docs/TENANCY.md`, `docs/SECURITY.md`, and `docs/ROADMAP.md`.

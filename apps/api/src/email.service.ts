@@ -13,6 +13,10 @@ export class EmailService {
     return this.send(email, "Reset your Vibe SaaS Foundry password", `Reset your password: ${this.baseUrl}/?reset=${encodeURIComponent(token)}`);
   }
 
+  async sendInvitation(email: string, organizationName: string, token: string) {
+    return this.send(email, `Join ${organizationName} on Vibe SaaS Foundry`, `Accept your workspace invitation: ${this.baseUrl}/?invite=${encodeURIComponent(token)}`);
+  }
+
   private async send(to: string, subject: string, text: string) {
     const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) {
