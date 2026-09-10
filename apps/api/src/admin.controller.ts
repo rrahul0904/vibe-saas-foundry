@@ -1,25 +1,30 @@
-import { Controller, Get, Headers, UnauthorizedException } from "@nestjs/common";
+import { Controller, Get } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
-import { Public } from "./public";
-import { Session, Task, User } from "./entities";
+import { AuditLog, Session, Task, User, UserRole } from "./entities";
+import { Roles } from "./roles";
 
+@Roles(UserRole.OPERATOR)
 @Controller("admin")
 export class AdminController {
   constructor(
-    @InjectRepository(User) private readonly users:Repository<User>,
-    @InjectRepository(Task) private readonly tasks:Repository<Task>,
-    @InjectRepository(Session) private readonly sessions:Repository<Session>,
+    @InjectRepository(User) private readonly users: Repository<User>,
+    @InjectRepository(Task) private readonly tasks: Repository<Task>,
+    @InjectRepository(Session) private readonly sessions: Repository<Session>,
+    @InjectRepository(AuditLog) private readonly audits: Repository<AuditLog>,
   ) {}
-  private assertKey(key?:string){ if(!process.env.ADMIN_API_KEY || key !== process.env.ADMIN_API_KEY) throw new UnauthorizedException("Invalid admin key"); }
-  @Public() @Get("metrics") async metrics(@Headers("x-admin-key") key?:string){
-    this.assertKey(key);
-    const [users,tasks,sessions]=await Promise.all([this.users.count(),this.tasks.count(),this.sessions.count()]);
-    return {users,tasks,sessions};
+
+  @Get("metrics") async metrics() {
+    const [users, tasks, sessions, auditEvents] = await Promise.all([this.users.count(), this.tasks.count(), this.sessions.count(), this.audits.count()]);
+    return { users, tasks, sessions, auditEvents };
   }
-  @Public() @Get("users") async recent(@Headers("x-admin-key") key?:string){
-    this.assertKey(key);
-    const users=await this.users.find({order:{createdAt:"DESC"},take:20});
-    return users.map(u=>({id:u.id,email:u.email,verified:Boolean(u.emailVerifiedAt),createdAt:u.createdAt}));
+
+  @Get("users") async recent() {
+    const users = await this.users.find({ order: { createdAt: "DESC" }, take: 50 });
+    return users.map(u => ({ id: u.id, email: u.email, role: u.role, verified: Boolean(u.emailVerifiedAt), createdAt: u.createdAt }));
+  }
+
+  @Get("audit") async audit() {
+    return this.audits.find({ order: { createdAt: "DESC" }, take: 100 });
   }
 }

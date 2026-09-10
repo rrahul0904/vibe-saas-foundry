@@ -23,9 +23,13 @@ services:
       API_PORT: 4000
       WEB_ORIGIN: http://localhost:5173
       ADMIN_ORIGIN: http://localhost:5174
+      PUBLIC_WEB_URL: http://localhost:5173
       SESSION_TTL_HOURS: 168
-      ADMIN_API_KEY: ${ADMIN_API_KEY:-change-me}
-      DB_SYNCHRONIZE: "true"
+      OPERATOR_EMAILS: ${OPERATOR_EMAILS:-operator@example.com}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      EMAIL_FROM: ${EMAIL_FROM:-Foundry <onboarding@resend.dev>}
+      DB_SYNCHRONIZE: "false"
+      DB_RUN_MIGRATIONS: "true"
     depends_on:
       postgres:
         condition: service_healthy

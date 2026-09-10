@@ -1,12 +1,21 @@
 # API Contract
 
-## Public
-- `GET /health`
-- `POST /auth/register`
-- `POST /auth/verify-email`
-- `POST /auth/login`
+## Public identity endpoints
+All public identity endpoints are throttled; sensitive endpoints have tighter per-minute limits.
 
-## Authenticated
+- `GET /health`
+- `POST /auth/register` `{ email, password }`
+- `POST /auth/resend-verification` `{ email }`
+- `POST /auth/verify-email` `{ token }`
+- `POST /auth/login` `{ email, password }`
+- `POST /auth/request-password-reset` `{ email }`
+- `POST /auth/reset-password` `{ token, password }`
+
+Password-reset and resend-verification responses are intentionally non-enumerating in production.
+
+## Authenticated customer endpoints
+Use `Authorization: Bearer <opaque-session-token>`.
+
 - `POST /auth/logout`
 - `POST /auth/logout-all`
 - `DELETE /users/me`
@@ -15,9 +24,11 @@
 - `PATCH /tasks/:id`
 - `DELETE /tasks/:id`
 
-## Operator
-Send `x-admin-key`.
+## Operator endpoints
+Operator routes use the same revocable bearer-session mechanism and additionally require `user.role=operator`.
+
 - `GET /admin/metrics`
 - `GET /admin/users`
+- `GET /admin/audit`
 
-The admin-key scheme is intentionally small for the reference implementation. Replace it with operator identity + RBAC before multi-user production administration.
+There is no shared admin API key in the hardened architecture.
