@@ -1,37 +1,39 @@
 # Architecture
 
-## Design goal
-The reference product should be complete enough that a coding agent can infer conventions from working code, while the example domain remains simple enough to replace.
-
+## System
 ```text
-Marketing (Next.js static)
-          │
-Web (React/Vite) ─────┐
-Mobile (Flutter) ─────┼──> NestJS API ───> PostgreSQL
-Admin (React/Vite) ───┘       │
-                              ├── users
-                              ├── revocable sessions
-                              ├── verification tokens
-                              └── tasks
+Marketing (Next static)
+
+Web ──────┐
+Mobile ───┼──> NestJS API ───> PostgreSQL
+Admin ────┘       │
+                  ├── identity + revocable sessions
+                  ├── organizations/memberships/invitations
+                  ├── internal entitlements
+                  ├── tenant-scoped task domain
+                  └── audit events
 ```
 
-## Boundaries
-- `marketing`: public acquisition/legal surface, deployable independently.
-- `web`: customer application; never import admin behavior.
-- `admin`: operator-only experience; uses a distinct admin credential model in the starter.
-- `mobile`: API consumer with no database access.
-- `api`: source of truth for identity and domain state.
-- `packages/contracts`: cross-client public types.
+## Product boundaries
+- `marketing`: independently deployable public acquisition surface.
+- `web`: customer application, workspace switcher, task and team workflows.
+- `admin`: operator-only experience; no customer admin concerns leak into web code.
+- `mobile`: same public API and tenant context as web.
+- `api`: source of truth for identity, tenancy, permissions and domain state.
+- `packages/contracts`: cross-client contract types.
 - `packages/design-tokens`: shared brand primitives.
 
-## Authentication
-Opaque session tokens are returned to clients. Only SHA-256 hashes are persisted. This enables immediate revocation and `logout-all` without relying on long-lived stateless JWT semantics.
+## Authorization layers
+1. Session guard validates an opaque revocable bearer credential.
+2. Global user role protects operator endpoints.
+3. Organization membership protects tenant endpoints.
+4. Membership role protects owner/admin operations.
+5. Database predicates include `organization_id` for tenant-domain data.
 
-## URL state
-Customer list filters map to query parameters: `search`, `status`, `sort`. Refreshing or sharing the URL preserves the same view.
+Never use a client-provided organization ID alone as proof of access.
 
-## Optimistic UI
-Task create/status/delete mutations update local state immediately. Network failure restores the prior snapshot and shows an error.
+## Billing boundary
+The product layer reads internal entitlements, not payment-provider objects. A billing adapter can later translate Stripe subscription state into `plan_code`, limits and feature flags without coupling customer-domain code to Stripe IDs.
 
-## Production evolution
-Move schema changes from development `synchronize` to explicit TypeORM migrations before production. Add a real email provider, production secret manager, rate limiting, structured audit logs, and organization/RBAC modules as documented in the roadmap.
+## Production runtime
+Docker starts with TypeORM migrations and schema synchronization disabled. PostgreSQL + HTTP remain the only hard platform assumptions; the applications can run in Docker, Kubernetes or cloud/VPC environments.

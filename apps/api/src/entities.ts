@@ -1,6 +1,7 @@
 import { Column, CreateDateColumn, Entity, Index, JoinColumn, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 
 export enum UserRole { MEMBER="member", OPERATOR="operator" }
+export enum MembershipRole { OWNER="owner", ADMIN="admin", MEMBER="member" }
 
 @Entity("users")
 export class User {
@@ -11,6 +12,52 @@ export class User {
   @Column({ name: "email_verified_at", type: "timestamptz", nullable: true }) emailVerifiedAt!: Date | null;
   @CreateDateColumn({ name: "created_at", type: "timestamptz" }) createdAt!: Date;
   @UpdateDateColumn({ name: "updated_at", type: "timestamptz" }) updatedAt!: Date;
+}
+
+@Entity("organizations")
+export class Organization {
+  @PrimaryGeneratedColumn("uuid") id!: string;
+  @Index({ unique:true }) @Column({ length:100 }) slug!: string;
+  @Column({ length:160 }) name!: string;
+  @CreateDateColumn({ name:"created_at", type:"timestamptz" }) createdAt!: Date;
+  @UpdateDateColumn({ name:"updated_at", type:"timestamptz" }) updatedAt!: Date;
+}
+
+@Entity("memberships")
+@Index(["organizationId", "userId"], { unique:true })
+export class Membership {
+  @PrimaryGeneratedColumn("uuid") id!: string;
+  @ManyToOne(() => Organization, { onDelete:"CASCADE" }) @JoinColumn({ name:"organization_id" }) organization!: Organization;
+  @Column({ name:"organization_id", type:"uuid" }) organizationId!: string;
+  @ManyToOne(() => User, { onDelete:"CASCADE" }) @JoinColumn({ name:"user_id" }) user!: User;
+  @Column({ name:"user_id", type:"uuid" }) userId!: string;
+  @Column({ type:"enum", enum:MembershipRole, enumName:"membership_role_enum", default:MembershipRole.MEMBER }) role!: MembershipRole;
+  @CreateDateColumn({ name:"created_at", type:"timestamptz" }) createdAt!: Date;
+}
+
+@Entity("organization_invitations")
+export class OrganizationInvitation {
+  @PrimaryGeneratedColumn("uuid") id!: string;
+  @ManyToOne(() => Organization, { onDelete:"CASCADE" }) @JoinColumn({ name:"organization_id" }) organization!: Organization;
+  @Column({ name:"organization_id", type:"uuid" }) organizationId!: string;
+  @Column() email!: string;
+  @Column({ type:"enum", enum:MembershipRole, enumName:"membership_role_enum" }) role!: MembershipRole;
+  @Index({ unique:true }) @Column({ name:"token_hash" }) tokenHash!: string;
+  @Column({ name:"invited_by_user_id", type:"uuid", nullable:true }) invitedByUserId!: string | null;
+  @Column({ name:"expires_at", type:"timestamptz" }) expiresAt!: Date;
+  @Column({ name:"accepted_at", type:"timestamptz", nullable:true }) acceptedAt!: Date | null;
+  @CreateDateColumn({ name:"created_at", type:"timestamptz" }) createdAt!: Date;
+}
+
+@Entity("organization_entitlements")
+export class OrganizationEntitlement {
+  @PrimaryGeneratedColumn("uuid") id!: string;
+  @Index({ unique:true }) @Column({ name:"organization_id", type:"uuid" }) organizationId!: string;
+  @Column({ name:"plan_code", length:40, default:"free" }) planCode!: string;
+  @Column({ name:"max_members", type:"int", default:3 }) maxMembers!: number;
+  @Column({ type:"jsonb", default:() => "'{}'::jsonb" }) features!: Record<string, boolean>;
+  @CreateDateColumn({ name:"created_at", type:"timestamptz" }) createdAt!: Date;
+  @UpdateDateColumn({ name:"updated_at", type:"timestamptz" }) updatedAt!: Date;
 }
 
 @Entity("sessions")
@@ -61,6 +108,8 @@ export enum TaskPriority { LOW="low", MEDIUM="medium", HIGH="high" }
 @Entity("tasks")
 export class Task {
   @PrimaryGeneratedColumn("uuid") id!: string;
+  @ManyToOne(() => Organization, { onDelete:"CASCADE" }) @JoinColumn({ name:"organization_id" }) organization!: Organization;
+  @Column({ name:"organization_id", type:"uuid" }) organizationId!: string;
   @ManyToOne(() => User, { onDelete: "CASCADE" }) @JoinColumn({ name: "user_id" }) user!: User;
   @Column({ name: "user_id", type: "uuid" }) userId!: string;
   @Column({ length: 240 }) title!: string;
