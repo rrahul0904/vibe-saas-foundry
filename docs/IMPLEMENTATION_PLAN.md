@@ -11,37 +11,41 @@
 - `recipes`: domain-transformation mappings for coding agents.
 - `infra`: portable runtime configuration.
 
-## Initial implementation wave
-1. Establish pnpm/Turborepo workspace and strict TypeScript base configuration.
-2. Implement users, email verification tokens, revocable sessions and tasks in PostgreSQL.
-3. Add NestJS controllers/services/guards and a health endpoint.
-4. Build the React customer application with URL-backed filters and optimistic mutation rollback.
-5. Build an isolated operator console with metrics and user inventory.
-6. Build a static Next.js marketing surface.
-7. Provide a Flutter reference client against the same API contract.
-8. Add Dockerfiles, Compose, nginx SPA serving and environment templates.
-9. Add GitHub Actions build/typecheck CI.
-10. Document architecture, API, security, deployment, roadmap and agent working rules.
+## Foundation — complete
+Monorepo, five application surfaces, auth/session baseline, task reference domain, Docker, CI, migration, shared contracts/design tokens and architecture documentation.
 
-## Hardening wave
-- Replace development schema synchronization with migration-only production startup.
-- Add password reset, email provider integration, OAuth, MFA and abuse protection.
-- Replace the starter admin API key with operator authentication and RBAC.
-- Add tests around auth/session lifecycle, ownership rules and optimistic state behavior.
-- Add structured logging, OpenTelemetry traces, metrics and audit events.
-- Add queues, idempotency and transactional outbox patterns for asynchronous work.
+## Identity hardening — Phase 1A complete in this wave
+- password-reset request and one-time reset completion
+- verification resend
+- Resend transactional email adapter with development fallback
+- operator/member persisted role model
+- authenticated operator console replacing the shared `ADMIN_API_KEY`
+- global + sensitive-route throttling
+- Helmet and strict request validation
+- audit event persistence and operator audit view
+- migration-first production startup with schema sync disabled
+- security helper unit tests and CI test execution
 
-## SaaS wave
+## Advanced identity — Phase 1B
+- OAuth/OIDC providers and safe account linking
+- TOTP/WebAuthn MFA and recovery codes
+- per-device session inventory and remote session revoke
+- mandatory MFA/stronger session policy for operators
+
+## SaaS wave — Phase 2
 Introduce organizations, memberships, invitations, roles/permissions, Stripe billing, plans, entitlements and usage metering without coupling them to the reference Task domain.
 
-## Agentic wave
+## Platform wave — Phase 3
+Add structured logs/traces/metrics, background queues, transactional outbox, notifications, object storage, webhooks, API keys, feature flags and idempotency primitives.
+
+## Agentic wave — Phase 4
 Add a product-spec schema, transformation planner, recipe engine and architecture validation so Codex/Claude-style coding agents can change the product while preserving platform invariants.
 
 ## Definition of done for every wave
 - documented architecture change
 - migration for persistent schema changes
 - shared contract update before client duplication
-- typecheck/build green
+- typecheck/build/test green
 - targeted automated tests
 - security review for auth/billing/data-boundary changes
 - Docker/local developer path remains functional

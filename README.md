@@ -6,26 +6,31 @@ A clean-room, production-oriented reference SaaS for AI-assisted software develo
 
 | App | Stack | Purpose |
 |---|---|---|
-| `apps/api` | NestJS + TypeORM + PostgreSQL | Auth, sessions, users, tasks, admin APIs |
+| `apps/api` | NestJS + TypeORM + PostgreSQL | Identity, sessions, tasks, audit and operator APIs |
 | `apps/web` | React + Vite | Customer SaaS with optimistic task UX |
-| `apps/admin` | React + Vite | Internal operator console |
-| `apps/marketing` | Next.js App Router | Static marketing and legal surface |
+| `apps/admin` | React + Vite | Authenticated operator console |
+| `apps/marketing` | Next.js App Router | Static marketing surface |
 | `apps/mobile` | Flutter | Mobile reference client |
 
 Shared contracts and design tokens live under `packages/`.
 
-## Core behaviors implemented
-- registration and email-verification token flow
-- password login
-- revocable bearer sessions and logout everywhere
-- account deletion
-- task create/read/update/delete
-- task status, priority, due date, search, filters, sorting
+## Implemented foundation
+- registration and transactional email verification
+- resend verification
+- password login with bcrypt hashing
+- password reset with one-time expiring tokens
+- revocable opaque sessions and logout everywhere
+- password reset revokes all previous sessions
+- member/operator persisted roles
+- operator bootstrap allowlist via `OPERATOR_EMAILS`
+- operator-only admin metrics, users and security audit history
+- global and auth-specific request throttling
+- Helmet security headers and strict DTO allowlisting
+- task create/read/update/delete with ownership enforcement
 - URL-persisted customer list state
 - optimistic task updates with rollback
-- admin metrics and recent-user view protected by an admin API key
-- Docker Compose with PostgreSQL
-- CI build/typecheck pipeline
+- Docker Compose + migration-first production startup
+- CI typecheck/build/test pipeline
 - agent-readable architecture and transformation recipes
 
 ## Local start
@@ -35,6 +40,7 @@ cp .env.example .env
 corepack enable
 pnpm install
 docker compose up -d postgres
+pnpm db:migrate
 pnpm dev
 ```
 
@@ -44,7 +50,7 @@ Default development URLs:
 - Admin: http://localhost:5174
 - Marketing: http://localhost:3000
 
-During non-production registration the API returns a `verificationToken` in the response so the complete auth loop can be tested without an email vendor. Production intentionally does not expose the token; wire an email provider before launch.
+Set your email in `OPERATOR_EMAILS`, register and verify that account, then sign into the admin application with the same email/password. During non-production auth flows, verification/reset tokens are also returned in responses for local testing. Production never returns those secrets and expects `RESEND_API_KEY` to be configured.
 
 ## Docker
 
@@ -52,7 +58,9 @@ During non-production registration the API returns a `verificationToken` in the 
 docker compose up --build
 ```
 
+Docker production mode runs TypeORM migrations before the API starts; schema synchronization is disabled.
+
 ## Clean-room scope
 This repository is an original implementation derived from publicly observable product concepts and standard SaaS patterns. It does not contain or claim access to the commercial toolkit's private source code.
 
-See `docs/ARCHITECTURE.md`, `docs/SECURITY.md`, and `docs/ROADMAP.md`.
+See `docs/PROJECT_PLAN.md`, `docs/IMPLEMENTATION_PLAN.md`, `docs/ARCHITECTURE.md`, `docs/SECURITY.md`, and `docs/ROADMAP.md`.

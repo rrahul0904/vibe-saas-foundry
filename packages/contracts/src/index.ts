@@ -1,9 +1,11 @@
 export type TaskStatus = "pending" | "in_progress" | "done";
 export type TaskPriority = "low" | "medium" | "high";
+export type UserRole = "member" | "operator";
 
 export interface UserSummary {
   id: string;
   email: string;
+  role: UserRole;
   emailVerifiedAt: string | null;
   createdAt: string;
 }
