@@ -52,9 +52,14 @@ function App() {
 
   useEffect(() => { load(); }, [session]);
 
+  async function signOut() {
+    try { if (session) await api("/auth/logout", session, { method: "POST" }); }
+    finally { localStorage.removeItem(TOKEN_KEY); setSession(""); }
+  }
+
   if (!session) return <div className="loginShell"><form className="loginCard" onSubmit={login}><span>FOUNDRY OPS</span><h1>Operator sign in</h1><p>Admin access now uses the same revocable session system plus the persisted operator role.</p><label>Email<input type="email" value={email} onChange={e => setEmail(e.target.value)} required /></label><label>Password<input type="password" minLength={8} value={password} onChange={e => setPassword(e.target.value)} required /></label><button>Sign in</button>{error && <div className="error">{error}</div>}</form></div>;
 
-  return <main><header><div><span>FOUNDRY OPS</span><h1>Operator console</h1><p>Authenticated operator-only system visibility, users and security audit events.</p></div><div className="actions"><button onClick={load}>Refresh</button><button onClick={() => { localStorage.removeItem(TOKEN_KEY); setSession(""); }}>Sign out</button></div></header>{error && <div className="error">{error}</div>}
+  return <main><header><div><span>FOUNDRY OPS</span><h1>Operator console</h1><p>Authenticated operator-only system visibility, users and security audit events.</p></div><div className="actions"><button onClick={load}>Refresh</button><button onClick={signOut}>Sign out</button></div></header>{error && <div className="error">{error}</div>}
     <section className="metrics">{["users", "tasks", "sessions", "auditEvents"].map(k => <article key={k}><b>{metrics?.[k] ?? "—"}</b><span>{k}</span></article>)}</section>
     <section className="panel"><div className="panelHead"><h2>Recent users</h2><span>latest 50</span></div><div className="tableScroll"><table><thead><tr><th>Email</th><th>Role</th><th>Verified</th><th>Created</th></tr></thead><tbody>{users.map(u => <tr key={u.id}><td>{u.email}</td><td>{u.role}</td><td>{u.verified ? "Yes" : "No"}</td><td>{new Date(u.createdAt).toLocaleString()}</td></tr>)}</tbody></table></div></section>
     <section className="panel"><div className="panelHead"><h2>Security audit</h2><span>latest 100</span></div><div className="tableScroll"><table><thead><tr><th>Action</th><th>Actor</th><th>Metadata</th><th>Time</th></tr></thead><tbody>{audits.map(a => <tr key={a.id}><td>{a.action}</td><td>{a.actorUserId || "system"}</td><td><code>{JSON.stringify(a.metadata)}</code></td><td>{new Date(a.createdAt).toLocaleString()}</td></tr>)}</tbody></table></div></section>
